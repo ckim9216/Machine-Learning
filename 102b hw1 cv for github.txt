@@ -1,0 +1,61 @@
+
+R version 3.6.1 (2019-07-05) -- "Action of the Toes"
+Copyright (C) 2019 The R Foundation for Statistical Computing
+Platform: x86_64-apple-darwin15.6.0 (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+[R.app GUI 1.70 (7684) x86_64-apple-darwin15.6.0]
+
+[Workspace restored from /Users/chan/.RData]
+[History restored from /Users/chan/.Rapp.history]
+
+> ## Task 3C: Cross-validation with R
+
+Now that you have written your cross-validation script from scratch, we can use the built-in functions in R. Library(boot) has the function `cv.glm()` which can be used to estimate cross-validation error.
+
+To make use of `cv.glm()` on the linear models, we must first use `glm()` to fit a generalized linear model to our data. If you do not change the attribute "family" in the function `glm()`, it will fit a linear model
+
+```{r cvwithR, error = TRUE}
+library(boot)
+gL1 <- glm(magnetic ~ chemical, data = ironslag) # equivalent to lm(magnetic ~ chemical)
+
+# find the LOOCV CV values for all of the models
+# for the models with log(magnetic), use the argument cost to specify your own 
+# cost function: cost = function(y, yhat) (exp(y) - exp(yhat))^2
+
+cv1 <- cv.glm(ironslag,gL1)$delta[1]
+cv1
+
+gL2 <- glm(magnetic ~ chemical + I(chemical^2), data = ironslag)
+cv2 <- cv.glm(ironslag,gL2)$delta[1]
+cv2
+
+gL3 <- glm(log(magnetic) ~ chemical, data = ironslag)
+cost <- function(y, yhat) (exp(y) - exp(yhat))^2
+cv3 <- cv.glm(ironslag, gL3, cost = cost)$delta[1]
+cv3
+
+gL4 <- glm(log(magnetic) ~ log(chemical), data = ironslag)
+cv4 <- cv.glm(ironslag, gL4, cost = cost)$delta[1]
+cv4
+
+```
+
+Your LOOCV estimates from `cv.glm()` should match your estimates when you coded your algorithm from scratch.
+
+
+Based on your Cross Validation scores, which model seems to be the best?
+- Quadratic model seems to be the best since it has the lowest cross validation score.
