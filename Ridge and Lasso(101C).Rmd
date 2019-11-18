@@ -1,0 +1,71 @@
+---
+title: "Ridge and Lasso(101C)"
+author: "Seulchan Kim"
+date: '2019 10 30 '
+output: pdf_document
+---
+
+Data
+```{r}
+data <- fivethirtyeight::hate_crimes
+data2 <- na.omit(data)
+x = model.matrix(avg_hatecrimes_per_100k_fbi~., data = data2)
+y = data2$avg_hatecrimes_per_100k_fbi
+
+library(glmnet)
+```
+
+Ridge
+```{r}
+set.seed (1)
+grid=10^seq(10,-2,length=100)
+ridge.mod=glmnet(x,y,alpha=0,lambda=grid)
+dim(coef(ridge.mod))
+ridge.mod$lambda [50]
+# When lamda = 11498
+coef(ridge.mod)[,50]
+sqrt(sum(coef(ridge.mod)[-1,50]^2))
+ridge.mod$lambda [60]
+# when lambda = 705
+coef(ridge.mod)[,60]
+sqrt(sum(coef(ridge.mod)[-1,60]^2))
+
+predict(ridge.mod,s=50,type="coefficients")[1:20,]
+
+# split the samples into a training and a test in order to estime the test error of ridge and lasso
+train=sample(1:nrow(x), nrow(x)/2)
+test=(-train)
+y.test=y[test]
+
+cv.out=cv.glmnet(x[train,],y[train],alpha=0)
+plot(cv.out)
+bestlam=cv.out$lambda.min
+bestlam # lambda that results in the smallest cv error is 1745
+# what is the MSE with this lambda?
+ridge.pred=predict(ridge.mod,s=bestlam ,newx=x[test,])
+mean((ridge.pred-y.test)^2)
+# refit our ridge regression model on the full data set, using the lambda chosen by cv, and examine the coefficient estimates.
+out=glmnet(x,y,alpha=0)
+predict(out,type="coefficients",s=bestlam)[1:20,]
+```
+None of the coefficients are zero; ridge regression does not perform variable selection.
+
+Lasso
+```{r}
+lasso.mod=glmnet(x[train ,],y[train],alpha=1,lambda=grid)
+plot(lasso.mod)
+
+set.seed (1)
+cv.out=cv.glmnet(x[train ,],y[train],alpha=1)
+plot(cv.out)
+bestlam=cv.out$lambda.min
+lasso.pred=predict(lasso.mod,s=bestlam ,newx=x[test,])
+mean((lasso.pred-y.test)^2)
+
+out=glmnet(x,y,alpha=1,lambda=grid)
+lasso.coef=predict(out,type="coefficients",s=bestlam)[1:20,]
+lasso.coef
+```
+Lasso Regression has a advantage over Ridge Regression in that the resulting coefficient estimates are sparse. We can see 4 coefficient estimates are exactly zero. So the lasso model with lambda chosen by cv contains only 4 variables.
+
+
