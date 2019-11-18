@@ -1,0 +1,154 @@
+---
+title: "19F-STATS101C_Hw1"
+author: "Seulchan Kim"
+date: '2019 10 2 '
+output:
+  pdf_document: default
+  html_document: default
+---
+
+#### Question 1
+(a) Write four questions that could be answered with these data.  Two of your questions should be questions that require estimating the parameters, and two should be prediction questions. Indicate which question is a 'parameter' and which is a 'prediction' question. (The Statistical Learning textbook classifies these as 'inference' vs. 'prediction' questions.)
+
+```{r}
+bechdel <- read.csv('bechdel.csv')
+```
+
+Inference Questions: (Conclusion based on facts and evidence)
+Q1) Is there a significant relationship between gender bias and movie business?
+Q2) Does domestic gross in 2013 significantly affect budget in 2013?
+
+Prediction Questions: (An idea, or guess,about what is going to happen, sometimes based on facts and evidence, predict other variables from same data points)
+Q1) How many movies have clearly passed the bechdel test if the movie budget over $13 million?
+Q2) Based on test validity, if test failed, can we predict average domestic gross in 2012?
+
+
+(b) Choose one of your questions and answer it.  It doesn't have to be a good answer (so you don't have to find the best model or justify the model), but you do have to give the answer to your question and explain how you answered it.
+
+Based on test validity, if test failed, can we predict average domestic gross in 2012?
+```{r}
+data  <- bechdel
+index <- (is.na(data$domgross) == FALSE)
+data <- data[index,]
+index2 <- (data$year == 2012)
+data<-data[index2,]
+index3 <- (data$binary == "FAIL")
+data <- data[index3,]
+data
+mean(data$domgross)
+
+```
+- Assign bechdel to data. Indices take domestic gross, in 2012, that fais the test. Then find the mean of the data.
+
+
+#### Question 2
+Upload hw1data.csv.  These are the data depicted in Scatterplot5 in the handout from Tuesday.  
+
+(a) Fit 5 models.  Model 5 should be a fifth-order polynomial, model 1 a 1st order (simple linear) model, etc.  List the MSE_training for each.  (Hint, use the anova() function to get the MSE)
+```{r}
+hw1 <- read.csv('hw1.csv')
+hw1
+poly1 <- lm(y~ poly(x,1,raw = TRUE), data = hw1)
+poly2 <- lm(y~ poly(x,2,raw = TRUE), data = hw1)
+poly3 <- lm(y~ poly(x,3,raw = TRUE), data = hw1)
+poly4 <- lm(y~ poly(x,4,raw = TRUE), data = hw1)
+poly5 <- lm(y~ poly(x,5,raw = TRUE), data = hw1)
+
+anova(poly1)
+anova(poly2)
+anova(poly3)
+anova(poly4)
+anova(poly5)
+
+### MSE = SSE/#obs. In this case, observation is 9. And SSE is the sum of squared residuals from the ANOVA table. Hence, 
+87201/9
+68374/9
+61465/9
+18310/9
+18288/9
+
+number <- matrix(c(1,9689,2,7597,3,6829,4,2034,5,2032),ncol =2, byrow = TRUE)
+#List the MSE_training for each Poly order
+df.number<-data.frame(number)
+colnames(df.number) <- c("Poly Order","training_MSE")
+df.number
+```
+
+(b) Based on MSE_training, which would you choose?
+- I choose 5th polynomial that has the smallest MSE. A smaller MSE shows that the data values are dispersed closely to its mean; which is usually great.
+
+(c) Now generate a new data set, the "testing" data set, using this R code. Use the models you got from part (a) to predict the y-values for x=seq(0,4,by=.5).
+Then, use the generated y-values to compute the MSE_testing for each of the five models. (Hint: use the predict() command to get the predicted y values for the x. Then, write your own function to compute the MSE.
+```{r}
+set.seed(456)
+x=seq(0,4,by=.5)
+y=500+200*x + rnorm(length(x),0,100)
+
+# use the models you got from part (a) to predict the y- values
+p_y1 <- predict(poly1, data.frame(x))
+p_y2 <- predict(poly2, data.frame(x))
+p_y3 <- predict(poly3, data.frame(x))
+p_y4 <- predict(poly4, data.frame(x))
+p_y5 <- predict(poly5, data.frame(x))
+# Then, use the generated y-values to compute the MSE_testing for each of the five models. (Hint: use the predict() command to get the predicted y values for the x. Then, write your own function to compute the MSE.
+
+# 9 should be the number of observations
+MSE1 <- (sum((p_y1 - y)^2)) / 9
+MSE2 <- (sum((p_y2 - y)^2)) / 9
+MSE3 <- (sum((p_y3 - y)^2)) / 9
+MSE4 <- (sum((p_y4 - y)^2)) / 9
+MSE5 <- (sum((p_y5 - y)^2)) / 9
+
+```
+
+d) Write a sentence or two describing how the MSE_testing and MSE_training compare. Now that you know the true model (y = 500_200*x), do the MSEs make sense?
+- MSE_testing values are higher than MSE_training values. It seems like that testing data could overfit. The true model for the testing data is the first order polynomial model, which is a linear model and it makes sense because the first order poly model has the lowest MSE.
+
+
+#### Question 3
+Explain whether each scenario is a classification or regression prob- lem, and indicate whether we are most interested in inference or pre- diction. Finally, provide n and p.
+
+side note: regression = continious, classifcation = discrete, p is variables
+(a) We collect a set of data on the top 500 firms in the US. For each firm we record profit, number of employees, industry and the CEO salary. We are interested in understanding which factors affect CEO salary.  
+- Regression and Inference, n = 500 and p = 3.It is regression since data has a quantative(continious) outcome, it is inference the objective is not predict but interpretate the relalation between the factors and the salary.
+
+(b) We are considering launching a new product and wish to know whether it will be a success or a failure. We collect data on 20 similar products that were previously launched. For each prod- uct we have recorded whether it was a success or failure, price charged for the product, marketing budget, competition price, and ten other variables.
+- Classification and prediction, n = 20 and p = 13. It is classification since it has a qualitative(binary) issue and the main interest is get an accurate response.
+
+(c) We are interesting in predicting the % change in the US dollar in relation to the weekly changes in the world stock markets. Hence we collect weekly data for all of 2012. For each week we record the % change in the dollar, the % change in the US market, the % change in the British market, and the % change in the German market.
+- Regression and prediction, n = 52 and p = 3.
+
+#### Question 4
+The Least Squares regression estimates are examples of BLUE. Best Linear Unbiased Estimators.  (a) Review the Gauss-Markov theorem (the statement, not the proof) and explain under which conditions this desirable quality of unbiasedness is achieved.(b) Give an example of a situation in which the GM theorem is NOT satisfied.
+
+(a) The Gauss–Markov theorem states that in a linear regression model in which the errors have expectation zero and are uncorrelated and have equal variances, the best linear unbiased estimator (BLUE) of the coefficients is given by the ordinary least squares (OLS) estimator, provided it exists.
+
+Four conditions of quality of unbiasedness:
+1. The mean of the errors is zero.
+2. The variance of the errors is finite and constant.
+3. Distinct error terms are uncorrelated.
+4. The mean of the response, E(Yi), at each value of the predictor, xi is a linear function of the xi.
+
+(b) Consider data below on the typical birthweight and length of gestation for various mammals. We treat the birthweight (x, in kg) as the predictor and the length of gestation (y, in number of days until birth) as the response
+
+Mammal  Birthwgt Gestation
+Goat    2.75    155
+Sheep   4       175
+Deer    0.48    190
+Porcupine1.5    210
+Bear    0.37    213
+Hippo   50      243
+Horse   30      340
+Camel   40      380
+Zebra   40      390
+Giraffe 98      457
+Elephant113     670
+
+- In terms of linear regression, the fitted line plot shows that the relationship between gestation(y) and birthweight(x) is linear, but the variance of the error terms may not be equal. The residuals vs fits plot shows some fanning and provides evidence that the variance of the error terms may not be equal.
+
+- We simply take natural logarithm to the y values; ln(Ĝest)=5.28+0.0104×Birthwgt
+Comparing the residual errors, this model best fits than the linear model with non-constant variance. Hence, Gauss-Markov theorem (the assumption of linearity) is not satisfied.
+
+- In addition, the variance of the errors is not a constant. So the validitiy of quality of unbiasedness is not satisfied. Hence, GM is not satisfied.
+
+
