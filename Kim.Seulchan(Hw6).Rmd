@@ -1,0 +1,126 @@
+---
+title: "Kim.Seulchan(Hw6)"
+author: "Seulchan Kim"
+date: '2019 11 8 '
+output:
+  html_document:
+    df_print: paged
+---
+
+1) Last time you were asked to use boston.train.csv to predict crime rates using a variety of approaches. This time, use principal components regression. Use the boston.test.csv dataset to test your models. 
+
+a) state the important predictors
+b) state the MSE on the testing data (boston.test.csv)
+c) Using your results from the last homework, which model now looks best? The two datasets are in the "data” folder under Site Info.
+```{r}
+# predictors
+library(pls)
+boston.train <- na.omit(read.csv("boston.train.csv"))
+boston.test <- na.omit(read.csv("boston.test.csv"))
+model.pcr <- pcr(crim~., data=boston.train,scale=TRUE,validatio="CV")
+summary(model.pcr)
+
+# MSE
+validationplot(model.pcr,val.type = "MSEP")
+print(model.pcr[["coefficients"]][,,10])
+pred.pcr <- predict(model.pcr,boston.test[,-1],ncomp = 10)
+print(mean((pred.pcr - boston.test$crim)^2))
+```
+
+"rad","tax" and "Istat" are most important predictors. The testing MSE is 85.5567, that is larger than any model from last homework.
+
+
+2) We perform best subset, forward stepwise, and backward stepwise selection on a single data set. For each approach, we obtain p + 1 models, containing 0, 1, 2, ..., p predictors. Explain your answers:
+
+(a) Which of the three models with k predictors has the smallest training RSS?
+The model with k predictors is the model with the smallest amongst all the linear square models with k predictors. For forward stepwise selection, the model with k predictors has smalles RSS among the p-k models. For backward stepwise selection, the model with k predictors has smallest RSS that contains all but one of the predictors in Mk+1. Thus the model with k predictors that has the smallest training RSS is the best, since it is the one selected among the all k predictors models.
+
+(b) Which of the three models with k predictors has the smallest test RSS?
+Best subset selection model should have the smallest RSS but the other models with different methods may also be a model with smaller test RSS by chance.
+
+
+
+4) In this exercise, we will predict the number of applications received using the other variables in the College data set. Use set.seed(12345)
+
+(a) Split the data set into a training set and a test set.
+```{r}
+library(ISLR)
+set.seed(12345)
+
+college <- College
+n <- nrow(college)
+alpha <- 0.75
+y_ind <- which(colnames(college) == "Apps")
+train_ind <- sample(1:n,alpha*n)
+train_df <- college[train_ind,]
+test_df <- college[-train_ind,]
+```
+
+(b) Fit a linear model using least squares on the training set, and report the test error obtained.
+```{r}
+lin_reg <- lm(Apps~., data= train_df )
+yhat <- predict(lin_reg, newdata = test_df[, -y_ind])
+mse_lm <- mean( (yhat - test_df[, y_ind])^2 )
+cat("The testing error is ", mse_lm, "\n")
+```
+
+(c) Fit a ridge regression model on the training set, with λ chosen by cross-validation. Report the test error obtained.
+
+```{r}
+library(glmnet)
+train_mm <- model.matrix(Apps ~., data = train_df)
+test_mm <- model.matrix(Apps ~., data = test_df)
+cv.out <- cv.glmnet(train_mm,train_df$Apps,alpha = 0)
+pred_ridge <- predict(cv.out, s=cv.out$lambda.min, newx = test_mm)
+mse_ridge <- mean((pred_ridge - test_df$Apps)^2)
+cat("The ridge testing mse is ", mse_ridge, "\n")
+```
+
+(d) Fit a lasso model on the training set, with λ chosen by cross- validation. Report the test error obtained, along with the number of non-zero coefficient estimates.
+
+```{r}
+cv.out <- cv.glmnet(train_mm, train_df[,y_ind], alpha = 1)
+pred_lasso <-  predict(cv.out, s=cv.out$lambda.min, newx = test_mm)
+mse_lasso <- mean((pred_lasso - test_df$Apps)^2)
+cat("(d) : The lasso testing mse is ", mse_lasso, '\n', "The number of coefficient is ", sum(coef(cv.out) != 0) -1 , "\n")
+```
+
+(e) Fit a PCR model on the training set, with M chosen by cross- validation. Report the test error obtained, along with the value of M selected by cross-validation.
+
+```{r}
+pcr.fit <- pcr(Apps ~., data = train_df,scale = TRUE, validation = "CV")
+validationplot(pcr.fit,val.type="MSEP")
+summary(pcr.fit)
+pred.pcr <- predict(pcr.fit,test_df[,-y_ind],ncomp = 17)
+mse_pcr = mean((pred.pcr - test_df$Apps)^2)
+cat("The PCR testing MSE is", mse_pcr,"with M = 17.\n")
+```
+
+(f) Fit a PLS model on the training set, with M chosen by cross- validation. Report the test error obtained, along with the value of M selected by cross-validation.
+
+
+```{r}
+pls.fit <- plsr(Apps ~., data = train_df,scale= TRUE, validation = "CV")
+validationplot(pls.fit,val.type = "MSEP")
+summary(pls.fit)
+pred.pls <- predict(pls.fit,test_df[,-y_ind], ncomp = 13)
+mse_pls = mean((pred.pls - test_df$Apps)^2)
+cat("The PLS testing MSE is", mse_pcr,"with M = 13.\n")
+```
+
+(g) Comment on the results obtained. How accurately can we pre- dict the number of college applications received? Is there much difference among the test errors resulting from these five approaches?
+
+```{r}
+true_val <- test_df$Apps
+cal_acc <- function(pred){
+  ssr <- sum((pred - true_val)^2)
+  sst <- sum((true_val - mean(true_val))^2)
+  return(1-ssr/sst)
+}
+acc_rec <- apply(cbind(yhat,pred_ridge,pred_lasso,pred.pcr,pred.pls),
+                 MARGIN = 2, FUN = cal_acc)
+names(acc_rec) <- c("ls","ridge","lasso","pcr","pls")
+acc_rec <- as.matrix(acc_rec)
+print(acc_rec)
+```
+All models have high accuracy about 91%.

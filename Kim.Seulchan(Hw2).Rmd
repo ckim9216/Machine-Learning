@@ -1,0 +1,203 @@
+---
+title: "Kim.Seulchan(Hw2)"
+author: "Seulchan Kim"
+date: '2019 10 10 '
+output: html_document
+---
+
+1. The table below provides a training data set containing six observa- tions, three predictors, and one qualitative response variable. Suppose we wish to use this data set to make a prediction for Y when X1 = X2 = X3 = 0 using K-nearest neighbors.
+Suppose we wish to use this data set to make a prediction for Y when X1 = X2 = X3 = 0 using K-nearest neighbors.
+
+(a) Compute the Euclidean distance between each observation and the test point, X1 = X2 = X3 = 0.
+
+Obs1: sqrt[(0 - 0)^2 + (3 - 0)^2 + (0 - 0)^2] = 3.
+
+Obs2: sqrt[(2 - 0)^2 + (0 - 0)^2 + (0 - 0)^2] = 2.
+
+Obs3: sqrt[(0 - 0)^2 + (1 - 0)^2 + (3 - 0)^2] = sqrt[0 + 1 + 9] = sqrt[10] = ~3.16.
+
+Obs4: sqrt[(0 - 0)^2 + (1 - 0)^2 + (2 - 0)^2] = sqrt[1 + 4] = sqrt[5] = ~2.24.
+
+Obs5: sqrt[(-1 - 0)^2 + (0 - 0)^2 + (1 - 0)^2] = sqrt[1 + 1] = sqrt[2] = ~1.41.
+
+Obs6: sqrt[(1 - 0)^2 + (1 - 0)^2 + (1 - 0)^2] = sqrt[1 + 1 + 1] = sqrt[3] = ~1.73.
+
+(b) What is our prediction with K = 1? Why?
+The nearest neihbor(nn) is observation 5 since it has the lowest Euclidean distance 1.41 with green. Thus the test will be green.
+
+(c) What is our prediction with K = 3? Why?
+The three nn are obs5, obs6, obs7, and they respectively have green, red and red in order. Thus the test point will be red.
+
+2) In this question, you're going to make plots to show how the bias and variance change as the flexibility increases (see 2.12 for one example. These plots will be a bit more simplistic than 2.12, however.)
+
+a) Fit a series of models: a linear model, a quadratic, a polynomial of order 3, order 4, order 5, order 6, and order 7.  For each, estimate the bias and the standard deviation at x_0 = 3.  Make a plot of bias against the order of the polynomial.  Connect the points with lines.
+```{r}
+set.seed(123)
+f <- function(x) {
+  5+2*x+1.5*x^2+0.4*x^3
+  }
+x <- rep(0:10, 5)
+y <- f(x) + rnorm(length(x), 0, 10)
+```
+
+
+b) Write an R function that simulates observations from this model Y = f(x) + epsilon, where f(x) = 5 + 2x + 1.5x^2 + .4 x^3 epsilon follows a N(0,10) distribution. Use this for x x = rep(0:10,5) and set.seed(123)
+
+```{r}
+set.seed(123)
+x0 = 3
+mse = rep(0,7)
+bias = rep(0,7)
+var = rep(0,7)
+for (i in 1:7){
+  f_zero_list = rep(0,1000)
+  for(j in 1:1000)
+  {
+    y = f(x) + rnorm(length(x),0,10)
+    f_hat <- lm(y~poly(x,i,raw=TRUE))
+    f_zero <- predict(f_hat, newdata = data.frame(x = x0))
+    f_zero_list[j] = f_zero
+  }
+  mse[i] = mean((f_zero_list - f(x0))^2)
+  bias[i] = f(x0) - mean(f_zero_list)
+  var[i] = var(f_zero_list)
+  
+}
+
+bias
+var^(1/2)
+
+plot(bias^2)
+lines(c(1:7), bias^2)
+
+plot(var)
+lines(c(1:7),var)
+
+plot(mse)
+lines(c(1:7),mse)
+```
+
+
+
+c) Superimpose, on the same plot, a plot of the variance of the model at x_0=3 against the order of the polynomial. (Again, connecting points with lines).
+
+```{r}
+plot(bias^2)
+lines(c(1:7),bias^2)
+points(c(1:7), var, col = "red")
+lines(c(1:7), var, col = "red")
+```
+
+
+d) Where does the bias have a minimum? Explain why this is not surprising. 
+
+```{r}
+abs(bias)
+```
+F(the real model) is to the third degree and has the min value 0.046.
+It is not surprising since it matches the true functions of polynomial order 3.
+While order is too large, it is more flexible and tends to taking care any points in our training data. Thus, it is overfitting.
+When we use test data to predict values, it could have a large bias.
+Similarily, if the order is too small, its small flexiblility will not reflect the trend of true function. Thus, it yields large bias.
+
+e) Calculate the MSE at x=3 and explain why the minimum is where it is at.
+```{r}
+plot(mse)
+lines(c(1:7),mse)
+which.min(mse)
+```
+polynomial of order 3 has the min value 3 since the order 3 polynomial is the true model.
+
+
+
+3) Suppose we collect data for a group of students in a statistics class with variables X1 = hours studied, X2 = undergrad GPA, and Y = receive an A. We fit a logistic regression and produce estimated coefficient, βˆ0 = −6, βˆ1 = 0.05, βˆ2 = 1.
+
+(a) Estimate the probability that a student who studies for 40 h and has an undergrad GPA of 3.5 gets an A in the class.
+```{r}
+p <- function(x1,x2){
+  z <- exp(-6 + 0.05*x1 + 1*x2)
+  ;return(round(z/(1+z),2))
+}
+p(40,3.5)
+
+```
+
+
+(b) How many hours would the student in part (a) need to study to have a 50 % chance of getting an A in the class?
+
+```{r}
+hours <- seq(40,60,1)
+probs <- mapply(hours, 3.5, FUN=p)
+names(probs) <- paste0(hours,"h")
+probs
+```
+
+This question should be answered using the Weekly data set, which is part of the ISLR package. This data is similar in nature to the Smarket data from this chapter’s lab, except that it contains 1,089 weekly returns for 21 years, from the beginning of 1990 to the end of 2010.
+
+```{r}
+library(MASS)
+# install.packages("ISLR")
+library(ISLR)
+```
+
+(a) Produce some numerical and graphical summaries of the Weekly data. Do there appear to be any patterns?
+```{r fig.width=11, fig.height=11}
+pairs(Weekly)
+cor(Weekly[,-ncol(Weekly)])
+```
+Volume and year are highly correlated, this shows to be a relationship where volume increases as a function of year. Some years seem to have more or less variation than others. In the violin shape of the various Lag features and the Year, there does seem to be some autocorrelation in the variability of the Lag and the year. 
+
+(b) Use the full data set to perform a logistic regression with Direction as the response and the five lag variables plus Volume as predictors. Use the summary function to print the results. Do any of the predictors appear to be statistically significant? If so, which ones?
+
+```{r}
+logit.fit = glm(Direction ~ Lag1+Lag2+Lag3+Lag4+Lag5+Volume, family=binomial, data=Weekly)
+contrasts(Weekly$Direction)
+summary(logit.fit)
+```
+Lag2's variable and intercept appear to be significant.
+
+(c) Compute the confusion matrix and overall fraction of correct predictions. Explain what the confusion matrix is telling you about the types of mistakes made by logistic regression.
+
+```{r}
+glm.probs=predict(logit.fit,Weekly,type="response")
+glm.pred=rep("Down",nrow(Weekly))
+glm.pred[glm.probs > 0.50]="Up"
+table(glm.pred,Weekly$Direction)
+mean(glm.pred==Weekly$Direction)
+
+```
+The confusion matrix tells us that the model does not fit well. 
+We guess "Up" direction mostly.
+Guessing yields most mistakes that the market is going up when it really is going down. 
+When Up is guessed, it is right `r 557/(430+557)` of the time.
+When down is guessed, it is right `r 54/(54+48)` of the time.
+
+
+(d) Now fit the logistic regression model using a training data period from 1990 to 2008, with Lag2 as the only predictor. Compute the confusion matrix and the overall fraction of correct predictions for the held out data (that is, the data from 2009 and 2010).
+```{r}
+train=Weekly$Year <= 2008
+Weekly.test=Weekly[!train,]
+logit.fit = glm(Direction ~ Lag2, family=binomial, data=Weekly, subset=train)
+contrasts(Weekly$Direction)
+summary(logit.fit)
+glm.probs=predict(logit.fit,Weekly.test,type="response")
+glm.pred=rep("Down",nrow(Weekly.test))
+glm.pred[glm.probs > 0.50]="Up"
+table(glm.pred,Weekly.test$Direction)
+mean(glm.pred==Weekly.test$Direction)
+```
+
+(g) Repeat (d) using KNN with K = 1.
+```{r}
+library(class)
+train.X=Weekly[train,"Lag2",drop=F]
+test.X=Weekly[!train,"Lag2",drop=F]
+train.Direction=Weekly[train,"Direction",drop=T]
+test.Direction=Weekly[!train,"Direction",drop=T]
+set.seed(1)
+knn.pred=knn(train.X,test.X,train.Direction,k=1)
+table(knn.pred,test.Direction)
+mean(knn.pred==test.Direction)
+
+```
+

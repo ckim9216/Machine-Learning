@@ -1,0 +1,139 @@
+---
+title: "Kim.Seulchan(Hw5)"
+author: "Seulchan Kim"
+date: '2019 10 28 '
+output:
+  html_document: default
+  pdf_document: default
+---
+
+\textbf{1.Read "50 Years of Data Science" by David Donoho.Write a few sentences explaining to a friend who knows some math and science, but not much statistics, what you see as the differences between data science and statistics, if any.}
+
+\textit{Dear friend, they are firstly different in size of their datasets. Data science is concerned with really big data, which traditional computing resources could not accommodate, thus data scientists need some set of skills and tools to deal with big data. Also the statisticians analyze the data for two goals: Prediction, to be able to predict what the responses are going to be to future input variables; Inference, to infer how nature is associataing the response variables to the input variables. On the other hand, in data science, data analytics is a process of inspecting, cleansing, transforming and modeling data with the goal of discovering useful information, informing conclusion and support decision-making. This seems more commercial, business aimed.} \newline\newline
+
+
+\textbf{3. Use the boston.train.csv data to predict the per-capita crime rate for these Boston neighborhoods. This data set consists of a randomly selected 2/3 of the original "Boston” dataset. Use each of these modeling strategies:}
+
+```{r}
+library(glmnet)
+library(leaps)
+boston.train <- read.csv('boston.train.csv')
+boston.test <- read.csv('boston.test.csv')
+```
+
+```{r}
+boston.train <- read.csv("boston.train.csv")
+boston.test <- read.csv("boston.test.csv")
+fullfit <- regsubsets(crim~.,data=boston.train, nvmax=14)
+
+predict.regsubsets <- function(object, newdata,id,...){
+  form <- as.formula(object$call[[2]])
+  mat <- model.matrix(form,newdata)
+  coeficient <- coef(object,id=id)
+  xvars <- names(coeficient)
+  mat[,xvars]%*%coeficient
+}
+
+print(summary(fullfit))
+reg <- summary(fullfit)
+```
+
+cp
+```{r}
+cp <- reg$cp
+cat('The best model chosen by cp has', which.min(cp), 'variable\n')
+# which variables and coefficient values for the optimal model according to cp
+coef(fullfit, which.min(cp))
+predict <- predict(fullfit, newdata = boston.test, id = which.min(cp))
+mse <- mean((predict-boston.test$crim)^2)
+cat('The minimum mse is', mse,'.\n')
+```
+
+bic
+```{r}
+bic <- reg$bic
+plot(1:13, bic)
+
+cat ('the best model choose by bic has', which.min(bic), 'variable\n')
+coef(fullfit,which.min(bic))
+pred.bic=predict(fullfit,newdata=boston.test,id=which.min(bic))
+mse.bic=mean((pred.bic-boston.test$crim)^2)
+cat('The minimum mse is', mse.bic,'.\n')
+```
+Both MSEs are pretty close, though BIC is ever so slightly loser. BIC prefers "smaller" (i.e. less flexible) models due to its relatively heavy penalty for complexity.
+
+
+cv
+Now for cv, we sort the models by the number of predictors. Within each "class" (in which all models in the class have the same number of predictors), we use something simple like r-squared to choose the best. (Since all methods will agree on the same model if the number of predictors is held constant). This leaves us with p "finalists". Then, we use 10-fold cv to estimate the MSE for each of the finalists and choose the one with the lowest MSE.
+
+```{r}
+k=10 # 10-fold
+nvar=13
+n=dim(boston.train)[1]
+set.seed(123)
+folds=sample(1:k,n,replace = TRUE)
+# this will be a matrix. The rows will hold the mse from each fold. The columns
+# will represent the number of variables in the model
+cv.errors=matrix(NA,k,nvar,dimnames = list(NULL,paste(1:nvar)))
+boston=na.omit(boston.train)
+for(j in 1:k){
+  best.fit=regsubsets(crim~.,data=boston[folds!=j,], nvmax=nvar)
+  for (i in 1:nvar){
+    pred = predict(best.fit,boston[folds==j,],id=i)
+    cv.errors[j,i]=mean((boston$crim[folds==j]-pred)^2)
+  }
+}
+avg.mse=apply(cv.errors,2,mean)
+cat('the number of parameter chosen by 10-fold cv is', which.min(avg.mse),'\n')
+coef(fullfit,which.min(avg.mse))
+pred.cv=predict(fullfit,newdata=boston.test,id=which.min(avg.mse))
+mse.cv= mean((pred.cv-boston.test$crim)^2)
+cat('the cv testing mse is' , mse.cv, '.\n')
+```
+
+Lasso
+```{r}
+set.seed(123)
+x=as.matrix(boston.train)
+cv.out=cv.glmnet(x[,-1],x[,1],alpha=1)
+plot(cv.out)
+
+best.lambda=cv.out$lambda.min
+cat('the lambda chosen in lasso is', best.lambda, '.\n')
+
+best.las=glmnet(x[,-1],x[,1],alpha=1,lambda=best.lambda)
+predict(best.las, type="coefficients", s=best.lambda)
+
+xtest=as.matrix(boston.test)[,-1]
+pred.lass=predict(best.las,newx=xtest)
+mse.las=mean((pred.lass-boston.test$crim)^2)
+cat('the lasso testing mse is', mse.las,'.\n')
+```
+
+Ridge
+```{r}
+cv.out=cv.glmnet(x[,-1],x[,1],alpha=0)
+plot(cv.out)
+
+best.lambda=cv.out$lambda.min
+cat('the lambda chosen in ridge is', best.lambda, '.\n')
+
+best.ridge=cv.out$lambda.min
+cat('the lambda chosen in ridge is', best.lambda, '.\n')
+
+best.ridge = glmnet(x[,-1],x[,1],alpha = 0,lambda = best.lambda)
+predict(best.ridge,type = "coefficients",s=best.lambda)
+
+cat('all variables, but large values are nox, chan, rm, din, rad, lata\n')
+pred.ridge=predict(best.ridge,newx = xtest)
+mse.ridge = mean((pred.ridge - boston.test$crim)^2)
+cat('The ridge counting mse is',mse.ridge,  '\n')
+
+```
+
+
+
+
+\textbf{4. Which of the above models would you recommend and why?}
+
+I choose BIC model since it has the lowest MSE (82.08559).
