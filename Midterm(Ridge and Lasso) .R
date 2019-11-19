@@ -1,3 +1,5 @@
+This is STATS101C coding part which should done around 30 minutes.
+
 wineA <- read.csv('wineA.csv')
 library(glmnet)
 
