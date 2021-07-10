@@ -1,7 +1,6 @@
 ---
-title: "Kim.Seulchan(Hw6)"
+title: "PLS, CV, Ridge and Lasso"
 author: "Seulchan Kim"
-date: '2019 11 8 '
 output:
   html_document:
     df_print: paged
