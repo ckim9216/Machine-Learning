@@ -1,7 +1,6 @@
 ---
-title: "STATS101C_Hw3"
+title: LDA,QDA, KNN, Logistic and CV
 author: "Seulchan Kim"
-date: '2019 10 14 '
 output: html_document
 ---
 
