@@ -1,7 +1,6 @@
 ---
-title: "Kim.Seulchan(Hw5)"
+title: "CV, Ridge and Lasso "
 author: "Seulchan Kim"
-date: '2019 10 28 '
 output:
   html_document: default
   pdf_document: default
