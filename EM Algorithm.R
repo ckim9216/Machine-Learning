@@ -1,4 +1,4 @@
-# use these initial arbitrary values
+# use these initial arbitrary values 
 N <- dim(dat)[1]  # number of data points
 alpha <- c(0.2,0.3,0.5)  # arbitrary starting mixing parameters
 mu <- matrix(  # arbitrary means
