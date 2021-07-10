@@ -1,7 +1,6 @@
 ---
-title: "19F-STATS101C_Hw1"
+title: "MSE,testing,training(conceptual)"
 author: "Seulchan Kim"
-date: '2019 10 2 '
 output:
   pdf_document: default
   html_document: default
